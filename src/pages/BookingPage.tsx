@@ -60,9 +60,7 @@ function BookingContent() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<WhatsAppBookingPayload | null>(null);
 
-  const whatsappConfigured =
-    (import.meta.env.VITE_WHATSAPP_NUMBER ?? "").replace(/\D/g, "").length >= 10;
-
+ 
   // ─── URL param → cart pre-fill ────────────────────────────────────────────
   useEffect(() => {
     const service = searchParams.get("service");
