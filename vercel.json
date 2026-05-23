@@ -12,6 +12,10 @@
   ],
   "routes": [
     {
+      "src": "/api/book-appointment",
+      "dest": "api/book-appointment.js"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "api/index.js"
     },
