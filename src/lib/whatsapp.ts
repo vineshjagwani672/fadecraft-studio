@@ -1,4 +1,4 @@
-export type WhatsAppBookingPayload = {
+export type BookingPayload = {
   ref: string;
   date: string;
   time: string;
@@ -8,45 +8,22 @@ export type WhatsAppBookingPayload = {
   lines: { name: string; qty: number; lineTotal: number }[];
   grandTotal: number;
 };
-
-export function formatKarachiBookingMessage(d: WhatsAppBookingPayload): string {
-  const parts: string[] = [
-    `*FadeCraft Studio — Karachi*`,
-    `*Website se nai booking*`,
-    ``,
-    `Ref: *${d.ref}*`,
-    `Naam: ${d.name}`,
-    `Mobile: ${d.phone}`,
-    `Tareekh: ${d.date}`,
+export function formatEmailBookingMessage(d: BookingPayload): string {
+  const lines = [
+    `New booking from website`,
+    `Ref: ${d.ref}`,
+    `Name: ${d.name}`,
+    `Phone: ${d.phone}`,
+    `Date: ${d.date}`,
     `Time: ${d.time}`,
     ``,
-    `*Services:*`,
-    ...d.lines.map(
-      (x) =>
-        `• ${x.name} ×${x.qty} — Rs. ${x.lineTotal.toLocaleString("en-PK")}`,
-    ),
+    `Services:`,
+    ...d.lines.map((x) => `- ${x.name} ×${x.qty} — Rs. ${x.lineTotal.toLocaleString("en-PK")}`),
     ``,
-    `*Total (tax + service fee ke saath):* Rs. ${d.grandTotal.toLocaleString("en-PK")}`,
+    `Total: Rs. ${d.grandTotal.toLocaleString("en-PK")}`,
   ];
-  if (d.notes.trim()) {
-    parts.push(``, `Notes: ${d.notes.trim()}`);
-  }
-  return parts.join("\n");
-}
-
-/**
- * Opens WhatsApp chat to YOUR number with a pre-filled booking message.
- * Set `VITE_WHATSAPP_NUMBER` in `.env` (digits only, country code, no +).
- * Example Pakistan mobile: 923001234567
- */
-export function buildWhatsAppBookingUrl(message: string): string | null {
-  const raw = import.meta.env.VITE_WHATSAPP_NUMBER;
-  if (typeof raw !== "string" || !raw.trim()) return null;
-
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length < 10) return null;
-
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  if (d.notes && d.notes.trim()) lines.push(``, `Notes: ${d.notes.trim()}`);
+  return lines.join("\n");
 }
 
 function apiBase(): string {
@@ -57,7 +34,7 @@ function apiBase(): string {
 
 /** POST → local Node server → CallMeBot (free) → WhatsApp on your phone */
 export async function notifyOwnerViaBackend(
-  body: WhatsAppBookingPayload,
+  body: BookingPayload,
 ): Promise<{ ok: boolean; error?: string }> {
   if (import.meta.env.VITE_DISABLE_NOTIFY === "1") {
     return { ok: false, error: "notify_disabled" };

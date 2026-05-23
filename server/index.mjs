@@ -10,11 +10,30 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import nodemailer from "nodemailer";
 
 const PORT = Number(process.env.PORT || 8787);
-const CALLMEBOT_API_KEY = process.env.CALLMEBOT_API_KEY?.trim();
-const CALLMEBOT_PHONE = process.env.CALLMEBOT_PHONE?.trim();
 const NOTIFY_SECRET = process.env.NOTIFY_SECRET?.trim();
+
+// Email configuration
+const EMAIL_HOST = process.env.EMAIL_HOST?.trim();
+const EMAIL_PORT = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
+const EMAIL_USER = process.env.EMAIL_USER?.trim();
+const EMAIL_PASS = process.env.EMAIL_PASS?.trim();
+const EMAIL_TO = process.env.EMAIL_TO?.trim();
+
+let transporter = null;
+if (EMAIL_HOST && EMAIL_PORT && EMAIL_USER && EMAIL_PASS) {
+  transporter = nodemailer.createTransport({
+    host: EMAIL_HOST,
+    port: EMAIL_PORT,
+    secure: EMAIL_PORT === 465, // true for 465, false for other ports
+    auth: {
+      user: EMAIL_USER,
+      pass: EMAIL_PASS,
+    },
+  });
+}
 
 const app = express();
 app.disable("x-powered-by");
@@ -68,8 +87,8 @@ function buildMessage(body) {
 }
 
 app.get("/api/health", (_req, res) => {
-  const ready = Boolean(CALLMEBOT_API_KEY && CALLMEBOT_PHONE);
-  res.json({ ok: true, whatsappReady: ready });
+  const ready = Boolean(transporter && EMAIL_TO);
+  res.json({ ok: true, emailReady: ready });
 });
 
 app.post("/api/notify-booking", async (req, res) => {
@@ -101,30 +120,36 @@ app.post("/api/notify-booking", async (req, res) => {
   if (!Array.isArray(b.lines) || b.lines.length === 0) {
     return res.status(400).json({ error: "lines required" });
   }
+  if (!transporter || !EMAIL_TO) {
+    return res.status(503).json({ error: "Email sender not configured" });
+  }
 
-  const text = buildMessage(b);
-  const url = new URL("https://api.callmebot.com/whatsapp.php");
-  url.searchParams.set("source", "fadecraft-studio");
-  url.searchParams.set("phone", CALLMEBOT_PHONE);
-  url.searchParams.set("text", text);
-  url.searchParams.set("apikey", CALLMEBOT_API_KEY);
+  const linesText = (Array.isArray(b.lines) ? b.lines : []).map(
+    (x) => `• ${x.name} ×${x.qty} — Rs.${Number(x.lineTotal).toLocaleString("en-PK")}`,
+  ).join("\n");
+
+  const text = [
+    `FadeCraft — new booking`,
+    `Ref: ${b.ref}`,
+    `Name: ${b.name}`,
+    `Phone: ${b.phone}`,
+    `Date: ${b.date}`,
+    `Time: ${b.time}`,
+    `\nServices:\n${linesText}`,
+    `\nTotal: Rs.${Number(b.grandTotal).toLocaleString("en-PK")}`,
+    b.notes ? `\nNotes: ${String(b.notes).slice(0, 800)}` : "",
+  ].join("\n");
 
   try {
-    const r = await fetch(url.toString(), { method: "GET" });
-    const raw = await r.text();
-    if (!r.ok) {
-      return res.status(502).json({
-        error: "CallMeBot HTTP error",
-        status: r.status,
-        detail: raw.slice(0, 500),
-      });
-    }
-    return res.json({ ok: true, callmebot: raw.slice(0, 200) });
-  } catch (e) {
-    return res.status(502).json({
-      error: "CallMeBot request failed",
-      detail: String(e?.message || e).slice(0, 300),
+    const info = await transporter.sendMail({
+      from: EMAIL_USER,
+      to: EMAIL_TO,
+      subject: `New booking — ${b.ref} — ${b.date} ${b.time}`,
+      text,
     });
+    return res.json({ ok: true, info: String(info.response || info.messageId || '') });
+  } catch (e) {
+    return res.status(502).json({ error: "Email send failed", detail: String(e?.message || e).slice(0, 300) });
   }
 });
 

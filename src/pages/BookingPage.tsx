@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
-  MessageCircle,
+  
   Minus,
   Plus,
   ShoppingBag,
@@ -30,12 +30,7 @@ import {
   generateTimeSlots,
   INITIAL_MOCK_BOOKED_KEYS,
 } from "@/lib/booking-utils";
-import {
-  buildWhatsAppBookingUrl,
-  formatKarachiBookingMessage,
-  notifyOwnerViaBackend,
-  type WhatsAppBookingPayload,
-} from "@/lib/whatsapp";
+import { notifyOwnerViaBackend, type BookingPayload } from "@/lib/whatsapp";
 
 function todayISO() {
   const d = new Date();
@@ -58,7 +53,7 @@ function BookingContent() {
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState<WhatsAppBookingPayload | null>(null);
+  const [success, setSuccess] = useState<BookingPayload | null>(null);
 
  
   // ─── URL param → cart pre-fill ────────────────────────────────────────────
@@ -216,7 +211,7 @@ try {
 
     const ref = `FC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
-    const payload: WhatsAppBookingPayload = {
+    const payload: BookingPayload = {
       ref,
       date: dateSnapshot,
       time: timeSnapshot,
@@ -242,11 +237,9 @@ try {
     setSuccess(payload);
 
     if (notify.ok) {
-      toast.success("Booking save — owner ko WhatsApp par message krke confirmation receivedc ka pata chala jaye gaya.");
+      toast.success("Booking saved — owner notified by email.");
     } else {
-      toast.message(
-        "Booking save ho gayi. .",
-      );
+      toast.message("Booking saved.");
     }
   }
 
@@ -265,7 +258,7 @@ try {
 
               Booking confirm hone ke baad aap ki details hamare record mein successfully save ho jaati hain aur aap ka selected timing slot humein email par receive ho jata hai.
 
-              Hamari team jald hi aap ko WhatsApp par appointment confirmation message bhej degi. Thank you for choosing Fadecraft Studio ✂️
+              Hamari team jald hi aap ko email par appointment confirmation bhej degi. Thank you for choosing Fadecraft Studio ✂️
             </p>
           </div>
           <Button variant="outline" asChild>
@@ -380,7 +373,7 @@ try {
               <CardHeader>
                 <CardTitle>Your details</CardTitle>
                 <CardDescription>
-                  Apna WhatsApp / mobile likhein taake hum slot confirm kar saken.
+                  Apna mobile number likhein taake hum slot confirm kar saken.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
@@ -389,23 +382,27 @@ try {
                     Full name
                   </label>
                   <input
+                    id="full-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm outline-none ring-primary/40 focus:ring-2"
-                    placeholder="Masalan: Hassan Ali"
+                    placeholder="Your full name"
                   />
                 </div>
+
                 <div className="md:col-span-1">
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted">
                     Phone
                   </label>
                   <input
+                    id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm outline-none ring-primary/40 focus:ring-2"
-                    placeholder="03XXXXXXXXX"
+                    placeholder="03xx-xxxxxxx"
                   />
                 </div>
+
                 <div className="md:col-span-2">
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted">
                     Notes
@@ -413,7 +410,6 @@ try {
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
                     className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm outline-none ring-primary/40 focus:ring-2"
                     placeholder="Barber preference, allergy, ya koi link..."
                   />
@@ -636,34 +632,9 @@ try {
               <p className="mt-4 text-sm leading-relaxed text-zinc-300">
                 Your booking has been saved successfully. We will contact you soon.
               </p>
-              {(() => {
-                const waUrl = buildWhatsAppBookingUrl(
-                  formatKarachiBookingMessage(success),
-                );
-                return waUrl ? (
-                  <Button className="mt-6 w-full gap-2 text-base" size="lg" asChild>
-                    <a
-                      href={waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="gap-2"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                      WhatsApp par booking bhejein
-                    </a>
-                  </Button>
-                ) : (
-                  <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-left text-sm text-amber-50">
-                    {" "}
-                    <code className="rounded bg-black/30 px-1"></code> {" "}
-                    <code className="mt-1 block rounded bg-black/30 p-2 text-xs">
-                      For further query=03153516936
-                    </code>{" "}
-                    {" "}
-                    <code className="rounded bg-black/30 px-1"></code>{" "}
-                  </div>
-                );
-              })()}
+              <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-left text-sm text-white">
+                Booking details have been sent to our studio inbox. We will contact you by email or phone if we need further information.
+              </div>
               <div className="mt-6 flex flex-col gap-2">
                 <Button
                   type="button"
