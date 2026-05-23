@@ -1,23 +1,19 @@
 {
-  "version": 3,
+  "version": 2,
   "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
     {
       "src": "package.json",
       "use": "@vercel/static-build"
-    },
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/book-appointment",
-      "dest": "api/book-appointment.js"
-    },
-    {
       "src": "/api/(.*)",
-      "dest": "api/index.js"
+      "dest": "/api/$1.js"
     },
     {
       "src": "/(.*)",
